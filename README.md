@@ -1,8 +1,9 @@
 # Readsb
 
-This is a detached fork of https://github.com/Mictronics/readsb
-
-It's continually under development, expect bugs, segfaults and all the good stuff :)
+This is a detached fork of https://github.com/wiedehopf/readsb
+It is (largely) compatible with macOS, and has been shown to compile on both Intel and ARM architectures.
+You may need to modify the Makefile to point at where on your mac you have the standard libs and includes installed.
+This in turn depends on whether you're using macports or homebrew for those libs and includes. I use homebrew.
 
 ## NO WARRANTY
 
@@ -12,26 +13,10 @@ see the LICENSE file for details
 
 ## how to install / build
 
-I'd recommend this script to automatically install it:
-- https://github.com/wiedehopf/adsb-scripts/wiki/Automatic-installation-for-readsb
+The mac build is not meant to be run as a service, but as command line only.
+Build it using 
+```make RTLSDR=yes```
 
-Or build the package yourself:
-```
-sudo apt update
-sudo apt install --no-install-recommends --no-install-suggests -y \
-    git build-essential debhelper libusb-1.0-0-dev \
-    librtlsdr-dev librtlsdr0 pkg-config fakeroot \
-    libncurses-dev zlib1g-dev zlib1g libzstd-dev libzstd1
-git clone --depth 20 https://github.com/wiedehopf/readsb.git
-cd readsb
-export DEB_BUILD_OPTIONS=noddebs
-dpkg-buildpackage -b -Prtlsdr -ui -uc -us
-sudo dpkg -i ../readsb_*.deb
-```
-
-Or check here for more build instructions and other useful stuff:
-- https://github.com/wiedehopf/adsb-wiki/wiki/Building-readsb-from-source
-- https://github.com/wiedehopf/adsb-wiki/wiki/Raspbian-Lite:-ADS-B-receiver
 
 ### aircraft.json format:
 
@@ -64,19 +49,9 @@ The uuid is optional, if none is given, the uuid from --uuid-file is used, if th
 The beast_reduce_out net-connector will never send an uuid.
 The aggregator enables --net-receiver-id and --net-ingest on their readsb server, it's made to work with beast_reduce_plus_out.
 
-### Debian package
+## More build options
 
-- Build package with no additional receiver library dependencies: `dpkg-buildpackage -b`.
-- Build with RTLSDR support: `dpkg-buildpackage -b --build-profiles=rtlsdr`
-
-## Building manually
-
-You can probably just run "make". By default "make" builds with no specific library support. See below.
-Binaries are built in the source directory; you will need to arrange to
-install them (and a method for starting them) yourself.
-
-"make RTLSDR=yes" will enable rtl-sdr support and add the dependency on
-librtlsdr.
+The following build options are from the original Wiedehopf/readsb readme:
 
 On Raspbian 32 bit, mostly rpi2 and older you might want to use this to compile if you're running into CPU issues:
 ```
@@ -95,9 +70,12 @@ make AIRCRAFT_HASH_BITS=11 RTLSDR=yes OPTIMIZE="-Ofast -march=native"
 The difference of using -Ofast or -O3 over the default of -O2 is likely very minimal.
 -march=native also usually makes little difference but it might, so it's worth a try.
 
-## Configuration
+## Running readsb
 
-If required, edit `/etc/default/readsb` to set the service options, device type, network ports etc.
+This build is meant to be run from the command line (try ```screen -S readsb``` and run it in there, press ctrl-A to detach the terminal)
+
+Example command line:
+```/readsb --device-type rtlsdr --gain auto --ppm 0 --lat -33.874 --lon 151.206 --net --net-heartbeat 60 --net-ro-size 1250 --net-ro-interval 0.05 --net-ri-port 30001 --net-ro-port 30002 --net-sbs-port 30003 --net-bi-port 30004,30104 --net-bo-port 30005 --net-connector feed.flyrealtraffic.com,30004,beast_reduce_plus_out --uuid=7817bd08-f226-11ef-ba9e-072eee452592```
 
 ## Autogain
 
