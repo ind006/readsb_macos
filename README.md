@@ -17,6 +17,12 @@ The mac build is not meant to be run as a service, but as command line only.
 Build it using 
 ```make RTLSDR=yes```
 
+## Running readsb
+
+This build is meant to be run from the command line (try ```screen -S readsb``` and run it in there, press ctrl-A to detach the terminal)
+
+Example command line:
+```/readsb --device-type rtlsdr --gain auto --ppm 0 --lat -33.874 --lon 151.206 --net --net-heartbeat 60 --net-ro-size 1250 --net-ro-interval 0.05 --net-ri-port 30001 --net-ro-port 30002 --net-sbs-port 30003 --net-bi-port 30004,30104 --net-bo-port 30005 --net-connector feed.flyrealtraffic.com,30004,beast_reduce_plus_out --uuid=7817bd08-f226-11ef-ba9e-072eee452592```
 
 ### aircraft.json format:
 
@@ -69,13 +75,6 @@ make AIRCRAFT_HASH_BITS=11 RTLSDR=yes OPTIMIZE="-Ofast -march=native"
 
 The difference of using -Ofast or -O3 over the default of -O2 is likely very minimal.
 -march=native also usually makes little difference but it might, so it's worth a try.
-
-## Running readsb
-
-This build is meant to be run from the command line (try ```screen -S readsb``` and run it in there, press ctrl-A to detach the terminal)
-
-Example command line:
-```/readsb --device-type rtlsdr --gain auto --ppm 0 --lat -33.874 --lon 151.206 --net --net-heartbeat 60 --net-ro-size 1250 --net-ro-interval 0.05 --net-ri-port 30001 --net-ro-port 30002 --net-sbs-port 30003 --net-bi-port 30004,30104 --net-bo-port 30005 --net-connector feed.flyrealtraffic.com,30004,beast_reduce_plus_out --uuid=7817bd08-f226-11ef-ba9e-072eee452592```
 
 ## Autogain
 
