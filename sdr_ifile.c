@@ -52,6 +52,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef __APPLE__
+#include "clock_compat.h"
+#endif
+
 #include "readsb.h"
 #include "sdr_ifile.h"
 

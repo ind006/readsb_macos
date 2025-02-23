@@ -95,8 +95,15 @@
 #include <zlib.h>
 #include <inttypes.h>
 #include <sched.h>
+
+#ifdef __APPLE__
+#include "epoll_shim.h"
+#include "eventfd_shim.h"
+#else
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#endif
+
 #include "minilzo/minilzo.h"
 #include "threadpool.h"
 #include <stdatomic.h>
@@ -553,9 +560,15 @@ struct _Modes
     char aneterr[ANET_ERR_LEN];
     struct net_service_group services_in; // Active services which primarily receive data
     struct net_service_group services_out; // Active services which primarily send data
+#ifdef __APPLE__
+    eventfd_t *exitNowEventfd_ctx;
+    eventfd_t *exitSoonEventfd_ctx;
+    int exitNowEventfd;     // Keep these for compatibility
+    int exitSoonEventfd;    // Keep these for compatibility
+#else
     int exitNowEventfd;
     int exitSoonEventfd;
-
+#endif
     int net_epfd; // epoll fd used for most network stuff
     int net_event_count;
     int net_maxEvents;

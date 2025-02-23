@@ -51,6 +51,10 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef __APPLE__
+#include "net_compat.h"
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -123,21 +127,36 @@ int anetSetSendBuffer(char *err, int fd, int buffsize)
 
 int anetTcpKeepAlive(char *err, int fd)
 {
-    int yes = 1;
-
     int idle = 20;
     int interval = 2;
     int count = 3;
 
-    if (
-            setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void*) &yes, sizeof(yes))
-            || setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (void*) &idle, sizeof(idle))
-            || setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, (void*) &interval, sizeof(interval))
-            || setsockopt(fd, SOL_TCP, TCP_KEEPCNT, (void*) &count, sizeof(count))
-       ) {
+    int yes = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void*)&yes, sizeof(yes)) == -1) {
         anetSetError(err, "setsockopt SO_KEEPALIVE: %s", strerror(errno));
         return ANET_ERR;
     }
+
+#ifdef __APPLE__
+    if (set_tcp_keepalive(fd, idle, interval, count) == -1) {
+        anetSetError(err, "setsockopt tcp keepalive: %s", strerror(errno));
+        return ANET_ERR;
+    }
+#else
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, (void*) &idle, sizeof(idle)) == -1) {
+        anetSetError(err, "setsockopt TCP_KEEPIDLE: %s", strerror(errno));
+        return ANET_ERR;
+    }
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, (void*) &interval, sizeof(interval)) == -1) {
+        anetSetError(err, "setsockopt TCP_KEEPINTVL: %s", strerror(errno));
+        return ANET_ERR;
+    }
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, (void*) &count, sizeof(count)) == -1) {
+        anetSetError(err, "setsockopt TCP_KEEPCNT: %s", strerror(errno));
+        return ANET_ERR;
+    }
+#endif
+
     return ANET_OK;
 }
 

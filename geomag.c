@@ -485,7 +485,7 @@ static char geomag_introduction(double epochlowlim)
 {
     char help;
     static char ans;
-    int res = 0;
+    __attribute__((unused)) int res = 0;
     res++;
 
     printf("\n\n Welcome to the World Magnetic Model (WMM) %4.0lf C-Program\n\n", epochlowlim);
@@ -577,7 +577,7 @@ void geomag_interactive() {
     double rTd=0.017453292;
     double epochrange = 5.0;
     double dmin, imin, ddeg, ideg;
-    int res = 0;
+    __attribute__((unused)) int res = 0;
     res++;
 
     char ans = geomag_introduction(epochlowlim);

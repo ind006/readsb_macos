@@ -55,6 +55,12 @@
 #include "readsb.h"
 #include "help.h"
 
+#ifdef __APPLE__
+#include "cpu_compat.h"
+#include "eventfd_shim.h"
+#include "epoll_event_compat.h"
+#endif
+
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -72,14 +78,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static void cleanup_and_exit(int code);
 
 void setExit(int arg) {
-    // Signal to main loop that program is exiting soon, delay depends on cli arguments
-    // see main loop for details
-
     Modes.exitSoon = arg;
 
+#ifdef __APPLE__
+    eventfd_signal(Modes.exitSoonEventfd_ctx);
+#else
     uint64_t one = 1;
     ssize_t res = write(Modes.exitSoonEventfd, &one, sizeof(one));
     MODES_NOTUSED(res);
+#endif
 }
 
 static void exitHandler(int sig) {
@@ -1019,7 +1026,7 @@ static void *decodeEntryPoint(void *arg) {
 }
 
 static void traceWriteTask(void *arg, threadpool_threadbuffers_t *buffer_group) {
-    task_info_t *info = (task_info_t *) arg;
+    readsb_task_t *info = (readsb_task_t *) arg;
 
     if (mono_milli_seconds() > Modes.traceWriteTimelimit) {
         return;
@@ -1096,7 +1103,7 @@ static void writeTraces(int64_t mono) {
 
     int taskCount = Modes.traceTasks->task_count;
     threadpool_task_t *tasks = Modes.traceTasks->tasks;
-    task_info_t *infos = Modes.traceTasks->infos;
+    readsb_task_t *infos = Modes.traceTasks->infos;
 
     // how long until we want to have checked every aircraft if a trace needs to be written
     int completeTime = 4 * SECONDS;
@@ -1149,7 +1156,7 @@ static void writeTraces(int64_t mono) {
 
 
             threadpool_task_t *task = &tasks[i];
-            task_info_t *range = &infos[i];
+            readsb_task_t *range = &infos[i];
 
             int thread_start = part * thread_section_len + imin(extra, part);
             int thread_end = thread_start + thread_section_len + (part < extra ? 1 : 0);
@@ -1184,7 +1191,7 @@ static void writeTraces(int64_t mono) {
 
     lastRunFinished = 1;
     for (int i = 0; i < taskCount; i++) {
-        task_info_t *range = &infos[i];
+        readsb_task_t *range = &infos[i];
         if (range->from != range->to) {
             lastRunFinished = 0;
         }
@@ -1399,6 +1406,16 @@ static void cleanup_and_exit(int code) {
 
     icaoFilterDestroy();
     quickDestroy();
+
+#ifdef __APPLE__
+    eventfd_cleanup(Modes.exitNowEventfd_ctx);
+    eventfd_cleanup(Modes.exitSoonEventfd_ctx);
+    free(Modes.exitNowEventfd_ctx);
+    free(Modes.exitSoonEventfd_ctx);
+#else
+    close(Modes.exitNowEventfd);
+    close(Modes.exitSoonEventfd);
+#endif
 
     exit(code);
 }
@@ -2900,9 +2917,19 @@ int main(int argc, char **argv) {
         return 3;
     }
 
+#ifdef __APPLE__
+    Modes.exitNowEventfd_ctx = eventfd_create(EFD_NONBLOCK);
+    Modes.exitSoonEventfd_ctx = eventfd_create(EFD_NONBLOCK);
+    if (!Modes.exitNowEventfd_ctx || !Modes.exitSoonEventfd_ctx) {
+        fprintf(stderr, "Failed to create eventfd contexts\n");
+        exit(1);
+    }
+    Modes.exitNowEventfd = Modes.exitNowEventfd_ctx->readfd;
+    Modes.exitSoonEventfd = Modes.exitSoonEventfd_ctx->readfd;
+#else
     Modes.exitNowEventfd = eventfd(0, EFD_NONBLOCK);
     Modes.exitSoonEventfd = eventfd(0, EFD_NONBLOCK);
-
+#endif
 
     if (argc >= 2 && !strcmp(argv[1], "--structs")) {
         fprintf(stderr, VERSION_STRING"\n");
@@ -3036,10 +3063,18 @@ int main(int argc, char **argv) {
         *a = 0;
     }
 
+#ifdef __APPLE__
+    epoll_context *epoll_ctx = epoll_create_context(1, &Modes.exitSoonEventfd);
+    if (!epoll_ctx) {
+        fprintf(stderr, "Failed to create epoll context\n");
+        cleanup_and_exit(1);
+    }
+#else
     int mainEpfd = my_epoll_create(&Modes.exitSoonEventfd);
     struct epoll_event *events = NULL;
     int maxEvents = 1;
     epollAllocEvents(&events, &maxEvents);
+#endif
 
     // init hungtimers
     pthread_mutex_lock(&Modes.hungTimerMutex);
@@ -3060,22 +3095,28 @@ int main(int argc, char **argv) {
                 setExit(1);
             }
         }
+
+#ifdef __APPLE__
+        int ev_count = epoll_wait_events(epoll_ctx, wait_time);
+        if (ev_count > 0 && epoll_event_is_ready(epoll_ctx, 0)) {
+#else
         if (epoll_wait(mainEpfd, events, maxEvents, wait_time) > 0) {
+#endif
             if (Modes.exitSoon) {
                 if (Modes.apiShutdownDelay) {
-                    // delay for graceful api shutdown
                     fprintf(stderr, "Waiting %.3f seconds (--api-shutdown-delay) ...\n", Modes.apiShutdownDelay / 1000.0);
                     msleep(Modes.apiShutdownDelay);
                 }
                 // Signal to threads that program is exiting
                 Modes.exit = Modes.exitSoon;
+    #ifdef __APPLE__
+                eventfd_signal(Modes.exitNowEventfd_ctx);
+    #else
                 uint64_t one = 1;
                 ssize_t res = write(Modes.exitNowEventfd, &one, sizeof(one));
                 MODES_NOTUSED(res);
-            } else if (!Modes.exit) {
-                // this shouldn't happen
-                fprintf(stderr, "wtf? too2Mee7\n");
-                msleep(50);
+    #endif
+                break;  // Exit the main loop immediately
             }
             continue;
         }
@@ -3105,8 +3146,12 @@ int main(int argc, char **argv) {
         }
     }
 
+#ifdef __APPLE__
+    epoll_destroy_context(epoll_ctx);
+#else
     close(mainEpfd);
     sfree(events);
+#endif
 
     if (Modes.json_dir) {
         // mark this instance as deactivated, webinterface won't load

@@ -1,4 +1,7 @@
 #include "readsb.h"
+#ifdef __APPLE__
+#include "stat_compat.h"
+#endif
 
 static int isMilRange(uint32_t i);
 static void updateDetails(struct aircraft *curr, struct char_buffer cb, uint32_t offset);
@@ -625,7 +628,7 @@ DBU0:
 
 static void updateTypeRegRange(void *arg, threadpool_threadbuffers_t *threadbuffers) {
     MODES_NOTUSED(threadbuffers);
-    task_info_t *info = (task_info_t *) arg;
+    readsb_task_t *info = (readsb_task_t *) arg;
     //fprintf(stderr, "%d %d\n", info->from, info->to);
     for (int j = info->from; j < info->to; j++) {
         for (struct aircraft *a = Modes.aircraft[j]; a; a = a->next) {

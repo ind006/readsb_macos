@@ -1,5 +1,9 @@
 #include "readsb.h"
 
+#ifdef __APPLE__
+#include "net_compat.h"
+#endif
+
 #define API_HASH_BITS (16)
 #define API_BUCKETS (1 << API_HASH_BITS)
 

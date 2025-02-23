@@ -17,6 +17,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifdef __APPLE__
+#include "serial_compat.h"
+#endif
+
 #include <termios.h>
 #include "readsb.h"
 #include "sdr_beast.h"
@@ -171,16 +175,21 @@ bool beastOpen(void) {
         }
     }
 
-    if (cfsetispeed(&tios, baud) < 0) {
-        fprintf(stderr, "Beast cfsetispeed(%s, %d): %s\n",
-                Modes.beast_serial, baud, strerror(errno));
-        return false;
+    struct termios term;
+    if (tcgetattr(Modes.beast_fd, &term) < 0) {
+        fprintf(stderr, "Beast tcgetattr(%s): %s\n", 
+                Modes.beast_serial, strerror(errno));
+        return -1;
     }
 
-    if (cfsetospeed(&tios, baud) < 0) {
-        fprintf(stderr, "Beast cfsetospeed(%s, %d): %s\n",
-                Modes.beast_serial, baud, strerror(errno));
-        return false;
+#ifdef __APPLE__
+    if (set_beast_custom_baud(Modes.beast_fd, baud, &term) < 0) {
+#else
+    if (cfsetispeed(&term, baud) < 0 || cfsetospeed(&term, baud) < 0) {
+#endif
+        fprintf(stderr, "Beast set speed(%s, %lu): %s\n",
+                Modes.beast_serial, (unsigned long)baud, strerror(errno));
+        return -1;
     }
 
     tcflush(Modes.beast_fd, TCIFLUSH);
