@@ -253,6 +253,8 @@ Build options:
                              (default: 1, globe options will default set this
                              to 2, disable speed filter: -1, max: 4)
                                    --json-trace-hist-only=1,2,3,8
+      --filter-hex=<hex>     Only processes message matching this aircraft hex address
+
 Don't write recent(1), full(2), either(3) traces
                              to /run, only archive via write-globe-history (8:
                              irregularly write limited traces to run, subject
