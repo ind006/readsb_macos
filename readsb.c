@@ -121,6 +121,9 @@ static void configSetDefaults(void) {
         Modes.threadNumber[i] = i;
     }
 
+    Modes.filter_hex_id = 0;
+    Modes.filter_hex_active = 0;
+
     // Now initialise things that should not be 0/NULL to their defaults
     Modes.gain = MODES_MAX_GAIN;
 
@@ -318,6 +321,10 @@ static void modesInit(void) {
     modeACInit();
 
     icaoFilterAdd(Modes.show_only);
+
+    if (Modes.filter_hex_active) {
+        icaoFilterAdd(Modes.filter_hex_id);
+    }
 
     init_globe_index();
 
@@ -1604,6 +1611,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     int maxTokens = 128;
     char* token[maxTokens];
     switch (key) {
+        case OptFilterHexId:
+            Modes.filter_hex_id = (uint32_t)strtol(arg, NULL, 16);
+            Modes.filter_hex_active = 1;
+            fprintf(stderr, "Only processing messages from aircraft with hex ID: %06x\n",
+                    Modes.filter_hex_id);
+            break;
         case OptDevice:
             Modes.dev_name = strdup(arg);
             break;

@@ -305,12 +305,18 @@ void threadTimedWait(threadT *thread, struct timespec *ts, int64_t increment) {
 void threadSignalJoin(threadT *thread) {
     if (thread->joined)
         return;
+    /*
     int64_t timeout = Modes.joinTimeout;
+    
     int err = 0;
     while ((err = pthread_tryjoin_np(thread->pthread, NULL)) && timeout-- > 0) {
         pthread_cond_signal(&thread->cond);
         msleep(1);
     }
+    */
+    pthread_cond_signal(&thread->cond);
+    int err = pthread_join(thread->pthread, NULL);
+    
     if (err == 0) {
         thread->joined = 1;
     } else {

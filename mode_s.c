@@ -1809,6 +1809,10 @@ static const char *esTypeName(unsigned metype, unsigned mesub) {
 void displayModesMessage(struct modesMessage *mm) {
     int j;
 
+    if (Modes.filter_hex_active && mm->addr != Modes.filter_hex_id) {
+        return; // Skip messages not from our target aircraft
+    }
+
     if (0 && mm->cpr_valid && mm->cpr_decoded) {
         printf("systemTime: %.3fs\n", (mm->sysTimestamp % (5*MINUTES)) / 1000.0);
         printf("  CPR odd flag:  %s\n",

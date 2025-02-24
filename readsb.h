@@ -505,6 +505,9 @@ struct _Modes
 { // Internal state
     pthread_mutex_t traceDebugMutex;
 
+    uint32_t filter_hex_id;      // Hex ID to filter for
+    int filter_hex_active;       // Whether hex filtering is active
+
     int num_procs;
     int allPoolSize;
     threadpool_t *allPool;
@@ -1309,6 +1312,7 @@ enum {
     OptSoapyBandwith,
     OptSoapyEnableAgc,
     OptSoapyGainElement,
+    OptFilterHexId,
 };
 
 
