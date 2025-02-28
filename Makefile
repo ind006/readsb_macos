@@ -25,6 +25,8 @@ ifeq ($(UNAME), Linux)
 else ifeq ($(UNAME), Darwin)
     CFLAGS += -D_DARWIN_C_SOURCE
     CFLAGS += -I.  # For epoll_shim.h
+    CFLAGS += -I/opt/homebrew/include  # For zstd.h
+    LDFLAGS += -L/opt/homebrew/lib
     LIBS = -pthread -lpthread -lm -lzstd
     COMPAT += epoll_shim.o eventfd_shim.o
 endif
